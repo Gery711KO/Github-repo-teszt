@@ -1,17 +1,17 @@
-package com.gery711k.yettelteszt.di
+package com.gery711k.yettelteszt.data.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.gery711k.yettelteszt.data.datasource.github.DefaultGitHubDataSource
-import com.gery711k.yettelteszt.data.datasource.github.GitHubDataSource
+import com.gery711k.yettelteszt.domain.datastore.GitHubDataSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.koin.core.module.dsl.new
 import org.koin.dsl.module
 
-private const val dataStoreKey = "temp_key"
+private const val dataStoreKey = "store_key"
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = dataStoreKey)
 

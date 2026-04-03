@@ -68,11 +68,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
-import com.gery711k.yettelteszt.data.model.github.GitHubRepositoryListItemDto
 import com.gery711k.yettelteszt.domain.model.PaginatedList
 import com.gery711k.yettelteszt.domain.model.Result
+import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryListItem
 import com.gery711k.yettelteszt.ui.navigation.Navigator
-import com.gery711k.yettelteszt.ui.navigation.destination.GitHubRepositoryDetailKey
+import com.gery711k.yettelteszt.ui.navigation.destination.GitHubRepositoryDetailScreenDestination
 import com.gery711k.yettelteszt.ui.utils.getSharedTransitionKeyForProperty
 import com.gery711k.yettelteszt.ui.utils.rotatingBorderAnimation
 import com.gery711k.yettelteszt.ui.utils.toReadableString
@@ -81,17 +81,16 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun GitHubRepositoryListScreen(
-    sharedTransitionScope: SharedTransitionScope,
     navigator: Navigator,
     viewModel: GitHubRepositoryListScreenViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    with(sharedTransitionScope) {
+    with(navigator.getSharedTransitionScope()) {
         DashboardScreenContent(
             uiState = uiState,
             onItemClicked = {
-                navigator.navigateTo(GitHubRepositoryDetailKey(it.id))
+                navigator.navigateTo(GitHubRepositoryDetailScreenDestination(it.id))
             },
             onSearch = {
                 viewModel.searchRepositories(it)
@@ -107,7 +106,7 @@ fun GitHubRepositoryListScreen(
 @Composable
 private fun SharedTransitionScope.DashboardScreenContent(
     uiState: DashboardScreenUiState?,
-    onItemClicked: (GitHubRepositoryListItemDto) -> Unit,
+    onItemClicked: (GitHubRepositoryListItem) -> Unit,
     onLoadMore: () -> Unit,
     onSearch: (query: String) -> Unit,
 ) {
@@ -125,10 +124,7 @@ private fun SharedTransitionScope.DashboardScreenContent(
                         isExpanded = isExpanded,
                         onToggleExpand = { isExpanded = it },
                         onSearch = onSearch,
-                        modifier = Modifier.rotatingBorderAnimation(
-                            isLoading = uiState?.listItems is Result.Loading,
-                            shape = SearchBarDefaults.inputFieldShape
-                        )
+                        isLoading = uiState?.listItems is Result.Loading
                     )
                 },
                 expanded = isExpanded,
@@ -192,7 +188,7 @@ private fun SharedTransitionScope.DashboardScreenContent(
                 if (listItemsResult is Result.Loading) item {
                     LoadingContent(
                         modifier = Modifier
-                            .padding(vertical = 48.dp)
+                            .fillParentMaxHeight()
                             .animateItem()
                     )
                 }
@@ -210,7 +206,7 @@ private fun SharedTransitionScope.DashboardScreenContent(
 
 @Composable
 private fun ErrorToast(
-    listItemsResult: Result<PaginatedList<GitHubRepositoryListItemDto>>?,
+    listItemsResult: Result<PaginatedList<GitHubRepositoryListItem>>?,
     context: Context = LocalContext.current
 ) {
     DisposableEffect(listItemsResult) {
@@ -236,7 +232,7 @@ private fun ErrorToast(
 
 @Composable
 private fun LoadMoreButton(
-    listItemState: Result<PaginatedList<GitHubRepositoryListItemDto>>,
+    listItemState: Result<PaginatedList<GitHubRepositoryListItem>>,
     onLoadMore: () -> Unit,
 ) {
     TextButton(
@@ -253,7 +249,7 @@ private fun LoadMoreButton(
 
             CircularProgressIndicator(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(16.dp)
                     .alpha(
                         if (listItemState is Result.Loading<*>) 1f
                         else 0f
@@ -289,6 +285,7 @@ private fun BoxScope.SearchButton(
 private fun SearchBarInput(
     textFieldState: TextFieldState,
     isExpanded: Boolean,
+    isLoading: Boolean,
     modifier: Modifier = Modifier,
     onToggleExpand: (Boolean) -> Unit,
     onSearch: (query: String) -> Unit,
@@ -306,16 +303,31 @@ private fun SearchBarInput(
         onExpandedChange = { onToggleExpand(it) },
         placeholder = { Text("Kezdj el gépelni...") },
         trailingIcon = {
-            Crossfade(targetState = textFieldState.text.isNotEmpty()) { hasText ->
-                if (hasText) {
-                    IconButton(onClick = { textFieldState.clearText() }) {
-                        Icon(
+            Crossfade(
+                targetState = when {
+                    isLoading -> SearchBarIcon.Loading
+                    textFieldState.text.isEmpty() -> SearchBarIcon.None
+                    else -> SearchBarIcon.Clear
+                }
+            ) { icon ->
+                IconButton(
+                    onClick = {
+                        if (icon == SearchBarIcon.Clear) {
+                            textFieldState.clearText()
+                        }
+                    },
+                    enabled = icon == SearchBarIcon.Clear
+                ) {
+                    when (icon) {
+                        SearchBarIcon.None -> Box(Modifier)
+                        SearchBarIcon.Clear -> Icon(
                             imageVector = Icons.Rounded.Close,
                             contentDescription = null
                         )
+                        SearchBarIcon.Loading -> CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
-                } else {
-                    Box(Modifier)
                 }
             }
         },
@@ -346,6 +358,10 @@ private fun SearchBarInput(
             }
         },
         modifier = modifier
+            .rotatingBorderAnimation(
+                isLoading = isLoading,
+                shape = SearchBarDefaults.inputFieldShape
+            )
             .fillMaxWidth()
             .focusRequester(focusRequest)
     )
@@ -380,14 +396,14 @@ private fun SearchHistoryItems(
 
 @Composable
 private fun SharedTransitionScope.ListContent(
-    listItems: ImmutableList<GitHubRepositoryListItemDto>?,
+    listItems: ImmutableList<GitHubRepositoryListItem>?,
     listState: LazyListState,
     contentPadding: PaddingValues,
     emptyContentSlot: LazyListScope.() -> Unit,
     errorContentSlot: LazyListScope.() -> Unit,
     loadingContentSlot: LazyListScope.() -> Unit,
     loadMoreButtonSlot: LazyListScope.() -> Unit,
-    onItemClicked: (GitHubRepositoryListItemDto) -> Unit,
+    onItemClicked: (GitHubRepositoryListItem) -> Unit,
 ) {
     LazyColumn(
         contentPadding = contentPadding,
@@ -482,7 +498,7 @@ private fun ErrorContent(modifier: Modifier = Modifier) {
 
 @Composable
 private fun GitHubRepositoryListItem(
-    item: GitHubRepositoryListItemDto,
+    item: GitHubRepositoryListItem,
     modifier: Modifier = Modifier,
 ) {
     ListItem(
@@ -525,4 +541,8 @@ private fun GitHubRepositoryListItem(
             }
         }
     )
+}
+
+private enum class SearchBarIcon {
+    None, Clear, Loading
 }

@@ -1,4 +1,4 @@
-package com.gery711k.yettelteszt.di
+package com.gery711k.yettelteszt.ui.di
 
 import com.gery711k.yettelteszt.ui.screen.githubrepositorydetail.GitHubRepositoryDetailScreenViewModel
 import com.gery711k.yettelteszt.ui.screen.githubrepositorylist.GitHubRepositoryListScreenViewModel

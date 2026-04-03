@@ -4,4 +4,4 @@ import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class GitHubRepositoryDetailKey(val repositoryId: Long) : NavKey
+data class GitHubRepositoryDetailScreenDestination(val repositoryId: Long) : NavKey

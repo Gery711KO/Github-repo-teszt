@@ -29,11 +29,11 @@ data class GitHubRepositoryListItemDto(
     @SerialName("updated_at")
     @Serializable(with = LocalDateTimeUtcSerializer::class)
     val lastUpdatedAt: LocalDateTime,
-    val owner: GitHubRepositoryOwner
+    val owner: GitHubRepositoryOwnerDto
 )
 
 @Serializable
-data class GitHubRepositoryOwner(
+data class GitHubRepositoryOwnerDto(
     val id: Long,
     @SerialName("login") val name: String,
     @SerialName("avatar_url") val avatarUrl: String,
@@ -46,8 +46,7 @@ private object LocalDateTimeUtcSerializer : KSerializer<LocalDateTime> {
 
     override fun serialize(encoder: Encoder, value: LocalDateTime) {
         val instant = value.toInstant(ZoneOffset.UTC)
-        encoder.encodeString(instant.toString())
-        // outputs ISO-8601 with Z
+        encoder.encodeString(instant.toString()) // outputs ISO-8601 with Z
     }
 
     override fun deserialize(decoder: Decoder): LocalDateTime {

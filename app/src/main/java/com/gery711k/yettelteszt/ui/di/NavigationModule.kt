@@ -1,7 +1,8 @@
-package com.gery711k.yettelteszt.ui.navigation
+package com.gery711k.yettelteszt.ui.di
 
-import com.gery711k.yettelteszt.ui.navigation.destination.GitHubRepositoryDetailKey
-import com.gery711k.yettelteszt.ui.navigation.destination.GitHubRepositoryListKey
+import com.gery711k.yettelteszt.ui.navigation.Navigator
+import com.gery711k.yettelteszt.ui.navigation.destination.GitHubRepositoryDetailScreenDestination
+import com.gery711k.yettelteszt.ui.navigation.destination.GitHubRepositoryListScreenDestination
 import com.gery711k.yettelteszt.ui.screen.githubrepositorydetail.GitHubRepositoryDetailScreen
 import com.gery711k.yettelteszt.ui.screen.githubrepositorylist.GitHubRepositoryListScreen
 import org.koin.androidx.scope.dsl.activityRetainedScope
@@ -13,19 +14,15 @@ import org.koin.dsl.navigation3.navigation
 val navigationModule = module {
     activityRetainedScope {
         scoped {
-            Navigator.createNavigator(GitHubRepositoryListKey)
+            Navigator.createNavigator(GitHubRepositoryListScreenDestination)
         }
 
-        navigation<GitHubRepositoryListKey> {
-            GitHubRepositoryListScreen(
-                sharedTransitionScope = getSharedTransitionScope(),
-                navigator = get()
-            )
+        navigation<GitHubRepositoryListScreenDestination> {
+            GitHubRepositoryListScreen(navigator = get())
         }
 
-        navigation<GitHubRepositoryDetailKey> { screen ->
+        navigation<GitHubRepositoryDetailScreenDestination> { screen ->
             GitHubRepositoryDetailScreen(
-                sharedTransitionScope = getSharedTransitionScope(),
                 repositoryId = screen.repositoryId,
                 navigator = get(),
             )

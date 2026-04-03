@@ -46,8 +46,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import com.gery711k.yettelteszt.data.model.github.GitHubRepositoryListItemDto
-import com.gery711k.yettelteszt.data.model.github.GitHubRepositoryOwner
+import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryListItem
+import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryOwner
 import com.gery711k.yettelteszt.ui.navigation.Navigator
 import com.gery711k.yettelteszt.ui.utils.getSharedTransitionKeyForProperty
 import com.gery711k.yettelteszt.ui.utils.toReadableString
@@ -56,7 +56,6 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 fun GitHubRepositoryDetailScreen(
-    sharedTransitionScope: SharedTransitionScope,
     navigator: Navigator,
     repositoryId: Long,
     viewModel: GitHubRepositoryDetailScreenViewModel = koinViewModel(key = repositoryId.toString()) {
@@ -65,7 +64,7 @@ fun GitHubRepositoryDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    with(sharedTransitionScope) {
+    with(navigator.getSharedTransitionScope()) {
         RepositoryDetailScreenContent(
             item = uiState,
             onNavigateBack = {
@@ -78,7 +77,7 @@ fun GitHubRepositoryDetailScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SharedTransitionScope.RepositoryDetailScreenContent(
-    item: GitHubRepositoryListItemDto?,
+    item: GitHubRepositoryListItem?,
     onNavigateBack: () -> Unit,
 ) {
     item?.let { item ->
@@ -160,12 +159,12 @@ private fun OwnerDetails(
             )
             Text(
                 text = buildAnnotatedString {
-                    append(owner.url)
+                    append(owner.avatarUrl)
 
                     addLink(
-                        url = LinkAnnotation.Url(url = owner.url),
+                        url = LinkAnnotation.Url(url = owner.avatarUrl),
                         start = 0,
-                        end = owner.url.length
+                        end = owner.avatarUrl.length
                     )
                 },
                 style = MaterialTheme.typography.bodyMedium
@@ -176,7 +175,7 @@ private fun OwnerDetails(
 
 @Composable
 private fun RepositoryDetails(
-    item: GitHubRepositoryListItemDto,
+    item: GitHubRepositoryListItem,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item.description?.let {

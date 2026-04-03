@@ -1,4 +1,4 @@
-package com.gery711k.yettelteszt.di
+package com.gery711k.yettelteszt.data.di
 
 import com.gery711k.yettelteszt.data.api.github.GitHubApiService
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -22,7 +22,7 @@ val networkModule = module {
             .build()
     }
 
-    factory {
+    factory<GitHubApiService> {
         get<Retrofit>().create<GitHubApiService>()
     }
 }

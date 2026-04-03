@@ -11,9 +11,7 @@ suspend inline fun <reified T: Any> DataStore<Preferences>.saveData(
 ) = updateData { preferences ->
     preferences.toMutablePreferences().apply {
         get(key)?.let { jsonString ->
-            val stored = json.decodeFromString<T>(jsonString)
-
-            modify(stored)
+            json.decodeFromString<T>(jsonString)
         }.let { storedValue ->
             set(key, json.encodeToString(modify(storedValue)))
         }

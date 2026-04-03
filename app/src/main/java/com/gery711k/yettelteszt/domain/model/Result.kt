@@ -15,3 +15,16 @@ sealed interface Result<out T: Any> {
         override val data: T? = null,
     ): Result<T>
 }
+
+fun <T: Any> Result<T>?.toLoadingOrDefault() = this?.let { result ->
+    Result.Loading(
+        data = result.data
+    )
+} ?: Result.Loading(null)
+
+fun <T: Any> Result<T>?.toErrorOrDefault(error: Exception) = this?.let { result ->
+    Result.Error(
+        error = error,
+        data = result.data
+    )
+} ?: Result.Error(error = error)

@@ -1,8 +1,8 @@
 package com.gery711k.yettelteszt.ui.utils
 
-import com.gery711k.yettelteszt.data.model.github.GitHubRepositoryListItemDto
+import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryListItem
 
 
-fun GitHubRepositoryListItemDto.getSharedTransitionKeyForProperty(
+fun GitHubRepositoryListItem.getSharedTransitionKeyForProperty(
     property: String
 ) = "$id**$property"

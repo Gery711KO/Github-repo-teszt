@@ -1,6 +1,6 @@
-package com.gery711k.yettelteszt.di
+package com.gery711k.yettelteszt.data.di
 
-import com.gery711k.yettelteszt.domain.repository.github.DefaultGitHubRepository
+import com.gery711k.yettelteszt.data.repository.github.DefaultGitHubRepository
 import com.gery711k.yettelteszt.domain.repository.github.GitHubRepository
 import org.koin.core.module.dsl.new
 import org.koin.dsl.module
