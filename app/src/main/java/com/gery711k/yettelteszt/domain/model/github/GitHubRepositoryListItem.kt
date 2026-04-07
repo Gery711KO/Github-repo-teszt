@@ -20,4 +20,5 @@ data class GitHubRepositoryListItem(
 data class GitHubRepositoryOwner(
     val name: String,
     val avatarUrl: String,
+    val url: String,
 )

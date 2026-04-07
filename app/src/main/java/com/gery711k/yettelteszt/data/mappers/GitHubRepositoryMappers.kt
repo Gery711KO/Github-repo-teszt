@@ -29,5 +29,6 @@ fun GitHubRepositoryListItemDto.toDomain() = GitHubRepositoryListItem(
 
 private fun GitHubRepositoryOwnerDto.toDomain() = GitHubRepositoryOwner(
     name = name,
-    avatarUrl = avatarUrl
+    avatarUrl = avatarUrl,
+    url = url
 )

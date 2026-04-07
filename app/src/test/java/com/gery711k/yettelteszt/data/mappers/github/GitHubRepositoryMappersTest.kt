@@ -46,5 +46,6 @@ class GitHubRepositoryMappersTest {
         assertEquals(dto.items[0].name, domain.items[0].name)
         assertEquals(dto.items[0].owner.name, domain.items[0].owner.name)
         assertEquals(dto.items[0].owner.avatarUrl, domain.items[0].owner.avatarUrl)
+        assertEquals(dto.items[0].owner.url, domain.items[0].owner.url)
     }
 }

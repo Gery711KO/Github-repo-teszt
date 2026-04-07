@@ -159,12 +159,12 @@ private fun OwnerDetails(
             )
             Text(
                 text = buildAnnotatedString {
-                    append(owner.avatarUrl)
+                    append(owner.url)
 
                     addLink(
-                        url = LinkAnnotation.Url(url = owner.avatarUrl),
+                        url = LinkAnnotation.Url(url = owner.url),
                         start = 0,
-                        end = owner.avatarUrl.length
+                        end = owner.url.length
                     )
                 },
                 style = MaterialTheme.typography.bodyMedium

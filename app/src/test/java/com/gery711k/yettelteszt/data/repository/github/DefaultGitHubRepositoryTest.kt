@@ -46,17 +46,7 @@ class DefaultGitHubRepositoryTest {
             val mockResponse = GitHubRepositorySearchResult(
                 total = 1,
                 items = persistentListOf(
-                    GitHubRepositoryListItem(
-                        id = 1L,
-                        name = "repo1",
-                        description = "desc1",
-                        repositoryLink = "link1",
-                        stars = 10,
-                        forksCount = 5,
-                        createdAt = LocalDateTime.now(),
-                        lastUpdatedAt = LocalDateTime.now(),
-                        owner = GitHubRepositoryOwner("user1","url1")
-                    )
+                    createRepo(id = 1L, name = "repo1"),
                 )
             )
             coEvery { gitHubDataSource.fetchGitHubRepositories(query, 1) } returns mockResponse
@@ -225,6 +215,6 @@ class DefaultGitHubRepositoryTest {
         forksCount = 0,
         createdAt = LocalDateTime.now(),
         lastUpdatedAt = LocalDateTime.now(),
-        owner = GitHubRepositoryOwner("owner_name", "url")
+        owner = GitHubRepositoryOwner("owner_name", "avatar_url", "url")
     )
 }
