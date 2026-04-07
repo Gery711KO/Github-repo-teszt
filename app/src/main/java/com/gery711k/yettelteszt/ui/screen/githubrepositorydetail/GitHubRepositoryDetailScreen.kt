@@ -1,5 +1,8 @@
 package com.gery711k.yettelteszt.ui.screen.githubrepositorydetail
 
+import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.rounded.ArrowBackIosNew
 import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.ForkLeft
@@ -41,18 +45,23 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.integration.compose.placeholder
 import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryListItem
 import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryOwner
 import com.gery711k.yettelteszt.ui.navigation.Navigator
+import com.gery711k.yettelteszt.ui.theme.MyApplicationTheme
 import com.gery711k.yettelteszt.ui.utils.getSharedTransitionKeyForProperty
+import com.gery711k.yettelteszt.ui.utils.skipInPreview
 import com.gery711k.yettelteszt.ui.utils.toReadableString
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import java.time.LocalDateTime
 
 @Composable
 fun GitHubRepositoryDetailScreen(
@@ -83,12 +92,14 @@ private fun SharedTransitionScope.RepositoryDetailScreenContent(
     item?.let { item ->
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
-            modifier = Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = item.getSharedTransitionKeyForProperty(item::class.java.simpleName),
-                ),
-                animatedVisibilityScope = LocalNavAnimatedContentScope.current,
-            ),
+            modifier = Modifier.skipInPreview {
+                sharedBounds(
+                    sharedContentState = rememberSharedContentState(
+                        key = item.getSharedTransitionKeyForProperty(item::class.java.simpleName),
+                    ),
+                    animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+                )
+            },
             topBar = {
                 TopAppBar(
                     title = {
@@ -144,6 +155,13 @@ private fun OwnerDetails(
                 .clip(CircleShape)
                 .size(100.dp),
             model = owner.avatarUrl,
+            loading = placeholder {
+                Icon(
+                    modifier = Modifier.size(100.dp),
+                    imageVector = Icons.Default.Image,
+                    contentDescription = ""
+                )
+            },
             contentDescription = null,
         )
 
@@ -258,6 +276,35 @@ fun InfoRow(
             )
 
             Text(text = infoText)
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Preview
+@Preview(uiMode = UI_MODE_NIGHT_YES)
+@Composable
+private fun GitHubRepositoryDetailScreenPreview() {
+    MyApplicationTheme {
+        SharedTransitionLayout {
+            RepositoryDetailScreenContent(
+                item = GitHubRepositoryListItem(
+                    id = 1,
+                    name = "Compose",
+                    description = "Jetpack Compose repository description. It is a long description to see how it looks like in the UI.",
+                    repositoryLink = "https://github.com/google/compose",
+                    stars = 1000,
+                    forksCount = 500,
+                    createdAt = LocalDateTime.now(),
+                    lastUpdatedAt = LocalDateTime.now(),
+                    owner = GitHubRepositoryOwner(
+                        name = "Google",
+                        avatarUrl = "",
+                        url = "https://github.com/google"
+                    )
+                ),
+                onNavigateBack = {}
+            )
         }
     }
 }

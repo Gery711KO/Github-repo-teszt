@@ -1,8 +1,11 @@
 package com.gery711k.yettelteszt.ui.screen.githubrepositorylist
 
 import android.content.Context
+import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -55,6 +58,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,19 +69,28 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.datasource.CollectionPreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import com.gery711k.yettelteszt.domain.model.PaginatedList
 import com.gery711k.yettelteszt.domain.model.Result
 import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryListItem
+import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryOwner
 import com.gery711k.yettelteszt.ui.navigation.Navigator
 import com.gery711k.yettelteszt.ui.navigation.destination.GitHubRepositoryDetailScreenDestination
+import com.gery711k.yettelteszt.ui.theme.MyApplicationTheme
 import com.gery711k.yettelteszt.ui.utils.getSharedTransitionKeyForProperty
 import com.gery711k.yettelteszt.ui.utils.rotatingBorderAnimation
+import com.gery711k.yettelteszt.ui.utils.skipInPreview
 import com.gery711k.yettelteszt.ui.utils.toReadableString
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import org.koin.androidx.compose.koinViewModel
+import java.time.LocalDateTime
 
 @Composable
 fun GitHubRepositoryListScreen(
@@ -86,9 +99,12 @@ fun GitHubRepositoryListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    var isSearchBarExpanded by rememberSaveable { mutableStateOf(false) }
+
     with(navigator.getSharedTransitionScope()) {
         DashboardScreenContent(
             uiState = uiState,
+            isSearchBarExpanded = isSearchBarExpanded,
             onItemClicked = {
                 navigator.navigateTo(GitHubRepositoryDetailScreenDestination(it.id))
             },
@@ -97,6 +113,9 @@ fun GitHubRepositoryListScreen(
             },
             onLoadMore = {
                 viewModel.loadMore()
+            },
+            onToggleSearchBarExpand = {
+                isSearchBarExpanded = it
             }
         )
     }
@@ -106,12 +125,13 @@ fun GitHubRepositoryListScreen(
 @Composable
 private fun SharedTransitionScope.DashboardScreenContent(
     uiState: DashboardScreenUiState?,
+    isSearchBarExpanded: Boolean,
     onItemClicked: (GitHubRepositoryListItem) -> Unit,
     onLoadMore: () -> Unit,
     onSearch: (query: String) -> Unit,
+    onToggleSearchBarExpand: (Boolean) -> Unit
 ) {
     val textFieldState = rememberTextFieldState()
-    var isExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     Scaffold(
@@ -121,14 +141,14 @@ private fun SharedTransitionScope.DashboardScreenContent(
                 inputField = {
                     SearchBarInput(
                         textFieldState = textFieldState,
-                        isExpanded = isExpanded,
-                        onToggleExpand = { isExpanded = it },
+                        isExpanded = isSearchBarExpanded,
+                        onToggleExpand = { onToggleSearchBarExpand(it) },
                         onSearch = onSearch,
                         isLoading = uiState?.listItems is Result.Loading
                     )
                 },
-                expanded = isExpanded,
-                onExpandedChange = { isExpanded = it },
+                expanded = isSearchBarExpanded,
+                onExpandedChange = { onToggleSearchBarExpand(it) },
                 modifier = Modifier
                     .background(
                         Brush.verticalGradient(
@@ -140,7 +160,7 @@ private fun SharedTransitionScope.DashboardScreenContent(
                     )
                     .padding(
                         horizontal = animateDpAsState(
-                            targetValue = if (!isExpanded) 16.dp
+                            targetValue = if (!isSearchBarExpanded) 16.dp
                             else 0.dp
                         ).value
                     )
@@ -152,12 +172,12 @@ private fun SharedTransitionScope.DashboardScreenContent(
                             textFieldState.setTextAndPlaceCursorAtEnd(it)
                             onSearch(it)
                         },
-                        onExpand = { isExpanded = it }
+                        onExpand = { onToggleSearchBarExpand(it) }
                     )
                     SearchButton(
                         textFieldState = textFieldState,
                         onSearch = onSearch,
-                        onToggleExpand = { isExpanded = it }
+                        onToggleExpand = { onToggleSearchBarExpand(it) }
                     )
                 }
             }
@@ -422,12 +442,14 @@ private fun SharedTransitionScope.ListContent(
                     item = item,
                     modifier = Modifier
                         .animateItem()
-                        .sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = item.getSharedTransitionKeyForProperty(item::class.java.simpleName),
-                            ),
-                            animatedVisibilityScope = LocalNavAnimatedContentScope.current,
-                        )
+                        .skipInPreview {
+                            sharedBounds(
+                                sharedContentState = rememberSharedContentState(
+                                    key = item.getSharedTransitionKeyForProperty(item::class.java.simpleName),
+                                ),
+                                animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+                            )
+                        }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = ripple(),
@@ -545,4 +567,110 @@ private fun GitHubRepositoryListItem(
 
 private enum class SearchBarIcon {
     None, Clear, Loading
+}
+
+private class PreviewData(
+    val isSearchBarExpanded: Boolean,
+    val listItems: Result<PaginatedList<GitHubRepositoryListItem>>?,
+    val searchHistory: List<String> = emptyList()
+)
+
+private class GitHubRepositoryListScreenPreviewProvider :
+    CollectionPreviewParameterProvider<PreviewData>(
+        listOf(
+            PreviewData(
+                isSearchBarExpanded = false,
+                listItems = Result.Success(previewPaginatedList),
+                searchHistory = searchHistory
+            ),
+            PreviewData(
+                isSearchBarExpanded = true,
+                listItems = Result.Success(previewPaginatedList),
+                searchHistory = searchHistory
+            ),
+            PreviewData(
+                isSearchBarExpanded = true,
+                listItems = Result.Success(previewPaginatedList),
+                searchHistory = emptyList()
+            ),
+            PreviewData(
+                isSearchBarExpanded = true,
+                listItems = Result.Loading(previewPaginatedList),
+                searchHistory = emptyList()
+            ),
+            PreviewData(
+                isSearchBarExpanded = false,
+                listItems = Result.Loading(data = previewPaginatedList),
+            ),
+            PreviewData(
+                isSearchBarExpanded = false,
+                listItems = Result.Loading(data = null),
+            ),
+            PreviewData(
+                isSearchBarExpanded = false,
+                listItems = Result.Error(
+                    data = previewPaginatedList,
+                    error = Exception()
+                ),
+            ),
+            PreviewData(
+                isSearchBarExpanded = false,
+                listItems = Result.Error(
+                    data = null,
+                    error = Exception()
+                ),
+            ),
+        )
+    ) {
+
+    companion object {
+        private val previewPaginatedList = PaginatedList(
+            list = persistentListOf(
+                GitHubRepositoryListItem(
+                    id = 1,
+                    name = "Compose",
+                    description = "Jetpack Compose repository",
+                    repositoryLink = "https://github.com/google/compose",
+                    stars = 1000,
+                    forksCount = 500,
+                    createdAt = LocalDateTime.now(),
+                    lastUpdatedAt = LocalDateTime.now(),
+                    owner = GitHubRepositoryOwner(
+                        name = "Google",
+                        avatarUrl = "",
+                        url = "https://github.com/google"
+                    )
+                )
+            ),
+            canLoadMore = true
+        )
+
+        private val searchHistory = listOf("query1, query2")
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Preview
+@Preview(uiMode = UI_MODE_NIGHT_YES)
+@Composable
+private fun GitHubRepositoryListScreenPreview(
+    @PreviewParameter(GitHubRepositoryListScreenPreviewProvider::class)
+    previewData: PreviewData
+) {
+    MyApplicationTheme {
+        SharedTransitionLayout {
+            DashboardScreenContent(
+                uiState = DashboardScreenUiState(
+                    canLoadMore = true,
+                    listItems = previewData.listItems,
+                    searchHistory = previewData.searchHistory.toImmutableList()
+                ),
+                isSearchBarExpanded = previewData.isSearchBarExpanded,
+                onItemClicked = {},
+                onLoadMore = {},
+                onSearch = {},
+                onToggleSearchBarExpand = {}
+            )
+        }
+    }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,3 +66,12 @@ fun Modifier.rotatingBorderAnimation(
         this.padding(borderStroke.width)
     }
 }
+
+@Composable
+fun Modifier.skipInPreview(
+    modifier: @Composable Modifier.() -> Modifier,
+): Modifier = this.then(
+    if (LocalInspectionMode.current) {
+        Modifier
+    } else Modifier.modifier()
+)
