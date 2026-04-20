@@ -22,15 +22,16 @@ android {
 
     buildTypes {
         getByName("debug") {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             // Enables resource shrinking.
-            isShrinkResources = true
-            isDebuggable = false
+            isShrinkResources = false
+            isDebuggable = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+
         release {
             isMinifyEnabled = true
             // Enables resource shrinking.
@@ -54,6 +55,10 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+composeCompiler {
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("../compose-stability.conf"))
 }
 
 tasks.withType<Test> {

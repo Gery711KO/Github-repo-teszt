@@ -5,6 +5,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -20,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.rounded.ArrowBackIosNew
 import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.ForkLeft
@@ -57,6 +57,7 @@ import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryOwner
 import com.gery711k.yettelteszt.ui.navigation.Navigator
 import com.gery711k.yettelteszt.ui.theme.MyApplicationTheme
 import com.gery711k.yettelteszt.ui.utils.getSharedTransitionKeyForProperty
+import com.gery711k.yettelteszt.ui.utils.shimmerLoadingAnimation
 import com.gery711k.yettelteszt.ui.utils.skipInPreview
 import com.gery711k.yettelteszt.ui.utils.toReadableString
 import org.koin.androidx.compose.koinViewModel
@@ -156,10 +157,11 @@ private fun OwnerDetails(
                 .size(100.dp),
             model = owner.avatarUrl,
             loading = placeholder {
-                Icon(
-                    modifier = Modifier.size(100.dp),
-                    imageVector = Icons.Default.Image,
-                    contentDescription = ""
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .size(100.dp)
+                        .shimmerLoadingAnimation(),
                 )
             },
             contentDescription = null,
