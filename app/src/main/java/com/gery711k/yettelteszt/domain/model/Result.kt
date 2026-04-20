@@ -1,8 +1,5 @@
 package com.gery711k.yettelteszt.domain.model
 
-import androidx.compose.runtime.Immutable
-
-@Immutable
 sealed interface Result<out T: Any> {
     val data: T?
 

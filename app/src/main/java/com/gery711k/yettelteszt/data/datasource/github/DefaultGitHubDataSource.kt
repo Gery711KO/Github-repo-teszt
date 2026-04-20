@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.gery711k.yettelteszt.data.api.github.GitHubApiService
 import com.gery711k.yettelteszt.data.datasource.saveData
 import com.gery711k.yettelteszt.data.mappers.toDomain
-import com.gery711k.yettelteszt.domain.datastore.GitHubDataSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -26,14 +25,16 @@ internal class DefaultGitHubDataSource(
         }
 
     override suspend fun saveSearchQuery(query: String) {
-        dataStore.saveData<List<String>>(
-            json = json,
-            key = searchHistoryStoreKey
-        ) { stored ->
-            stored?.toMutableList()?.apply {
-                remove(query)
-                add(query)
-            }?.distinct() ?: listOf(query)
+        withContext(ioDispatcher) {
+            dataStore.saveData<List<String>>(
+                json = json,
+                key = searchHistoryStoreKey
+            ) { stored ->
+                stored?.toMutableList()?.apply {
+                    remove(query)
+                    add(query)
+                }?.distinct() ?: listOf(query)
+            }
         }
     }
 

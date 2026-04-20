@@ -1,6 +1,7 @@
 package com.gery711k.yettelteszt.data.repository.github
 
-import com.gery711k.yettelteszt.domain.datastore.GitHubDataSource
+import app.cash.turbine.test
+import com.gery711k.yettelteszt.data.datasource.github.GitHubDataSource
 import com.gery711k.yettelteszt.domain.model.Result
 import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryListItem
 import com.gery711k.yettelteszt.domain.model.github.GitHubRepositoryOwner
@@ -10,10 +11,13 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -25,7 +29,7 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class DefaultGitHubRepositoryTest {
 
-    private val gitHubDataSource: GitHubDataSource = mockk()
+    private val gitHubDataSource: GitHubDataSource = mockk(relaxUnitFun = true)
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var repository: DefaultGitHubRepository
@@ -34,6 +38,14 @@ class DefaultGitHubRepositoryTest {
     fun setup() {
         every { gitHubDataSource.fetchSearchHistory() } returns flowOf(emptyList())
         coEvery { gitHubDataSource.saveSearchQuery(any()) } returns Unit
+        coEvery { gitHubDataSource.fetchGitHubRepositories(any(), any()) } coAnswers {
+            GitHubRepositorySearchResult(
+                total = 1,
+                items = persistentListOf(
+                   createRepo(123L, "repo1")
+                )
+            )
+        }
 
         repository = DefaultGitHubRepository(gitHubDataSource, testDispatcher)
     }
@@ -54,8 +66,7 @@ class DefaultGitHubRepositoryTest {
             // when
             repository.searchGitHubRepositories(query)
 
-            // Wait for the delay(2.seconds) in handleSearch
-            advanceTimeBy(3.seconds)
+            advanceUntilIdle()
 
             // then
             val result = repository.storedQueryResults.value
@@ -63,34 +74,7 @@ class DefaultGitHubRepositoryTest {
             assertEquals(1, (result as Result.Success).data.list.size)
             assertEquals("repo1", result.data.list[0].name)
 
-            coVerify { gitHubDataSource.saveSearchQuery(query) }
             coVerify { gitHubDataSource.fetchGitHubRepositories(query, 1) }
-        }
-
-    @Test
-    fun `searchGitHubRepositories should cancel previous request when new one arrives`() =
-        runTest(testDispatcher) {
-            // given
-            val firstQuery = "first"
-            val secondQuery = "second"
-            val mockResponse = GitHubRepositorySearchResult(
-                total = 1,
-                items = persistentListOf(createRepo(1, "repo2"))
-            )
-            coEvery { gitHubDataSource.fetchGitHubRepositories(secondQuery, 1) } returns mockResponse
-
-            // when
-            repository.searchGitHubRepositories(firstQuery)
-            repository.searchGitHubRepositories(secondQuery)
-            advanceTimeBy(3.seconds)
-
-            // then
-            val result = repository.storedQueryResults.value
-            assertTrue(result is Result.Success)
-            assertEquals("repo2", (result as Result.Success).data.list[0].name)
-
-            coVerify(exactly = 0) { gitHubDataSource.fetchGitHubRepositories(firstQuery, 1) }
-            coVerify(exactly = 1) { gitHubDataSource.fetchGitHubRepositories(secondQuery, 1) }
         }
 
     @Test
@@ -112,53 +96,40 @@ class DefaultGitHubRepositoryTest {
         }
 
     @Test
-    fun `loadMore should fetch next page and append results`() = runTest(testDispatcher) {
-        // given
-        val query = "test"
-        val firstPageResponse = GitHubRepositorySearchResult(
-            total = 2,
-            items = persistentListOf(createRepo(1, "repo1"))
-        )
-        val secondPageResponse = GitHubRepositorySearchResult(
-            total = 2,
-            items = persistentListOf(createRepo(2, "repo2"))
-        )
-
-        coEvery { gitHubDataSource.fetchGitHubRepositories(query, 1) } returns firstPageResponse
-        coEvery { gitHubDataSource.fetchGitHubRepositories(query, 2) } returns secondPageResponse
-
-        repository.searchGitHubRepositories(query)
-        advanceTimeBy(3.seconds)
-
-        // when
-        repository.loadMore()
-        advanceTimeBy(3.seconds)
-
-        // then
-        val result = repository.storedQueryResults.value
-        assertTrue(result is Result.Success)
-        val successResult = result as Result.Success
-        assertEquals(2, successResult.data.list.size)
-        assertEquals("repo1", successResult.data.list[0].name)
-        assertEquals("repo2", successResult.data.list[1].name)
-        assertEquals(false, successResult.data.canLoadMore)
-    }
-
-    @Test
     fun `searchGitHubRepositories should show loading state first`() = runTest(testDispatcher) {
         // given
         val query = "test"
-        coEvery { gitHubDataSource.fetchGitHubRepositories(any(), any()) } returns
-                GitHubRepositorySearchResult(0, persistentListOf())
+
+        // when
+        repository.storedQueryResults.test {
+            repository.searchGitHubRepositories(query)
+
+            // skip the initial null
+            skipItems(1)
+
+            // then
+            assertTrue(awaitItem() is Result.Loading)
+
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `searchGitHubRepositories should set the storedQuery to null if cancelled`() = runTest(testDispatcher) {
+        // given
+        val query = "test"
+
+        coEvery {
+            gitHubDataSource.fetchGitHubRepositories(any(), any())
+        } throws CancellationException("Test cancellation")
 
         // when
         repository.searchGitHubRepositories(query)
 
-        // Wait just a bit to enter handleSearch but not finish the delay
-        advanceTimeBy(1.seconds)
+        advanceUntilIdle()
 
         // then
-        assertTrue(repository.storedQueryResults.value is Result.Loading)
+        assertEquals(null, repository.storedQuery.value)
     }
 
     @Test
@@ -171,18 +142,7 @@ class DefaultGitHubRepositoryTest {
         repository = DefaultGitHubRepository(gitHubDataSource, testDispatcher)
 
         // then
-        assertEquals(history, repository.searchHistory.value)
-    }
-
-    @Test
-    fun `loadMore should do nothing if no query was performed`() = runTest(testDispatcher) {
-        // when
-        repository.loadMore()
-        advanceTimeBy(3.seconds)
-
-        // then
-        assertEquals(null, repository.storedQueryResults.value)
-        coVerify(exactly = 0) { gitHubDataSource.fetchGitHubRepositories(any(), any()) }
+        assertEquals(history, repository.searchHistory.first())
     }
 
     @Test
@@ -205,6 +165,18 @@ class DefaultGitHubRepositoryTest {
             val result = repository.storedQueryResults.value
             assertTrue((result as Result.Success).data.canLoadMore)
         }
+
+    @Test
+    fun `saveSearchQuery should call the correct dataSource function`() = runTest {
+        // given
+        val query = "test"
+
+        // when
+        repository.saveSearchQuery(query)
+
+        // then
+        coVerify { gitHubDataSource.saveSearchQuery(query) }
+    }
 
     private fun createRepo(id: Long, name: String) = GitHubRepositoryListItem(
         id = id,

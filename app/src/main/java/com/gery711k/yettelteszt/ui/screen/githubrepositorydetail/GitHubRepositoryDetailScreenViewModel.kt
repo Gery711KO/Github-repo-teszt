@@ -2,22 +2,20 @@ package com.gery711k.yettelteszt.ui.screen.githubrepositorydetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gery711k.yettelteszt.domain.usecase.github.GetStoredQueryResultsUseCase
+import com.gery711k.yettelteszt.domain.usecase.github.GetRepositoryDetailByIdUseCase
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.time.Duration.Companion.seconds
 
 class GitHubRepositoryDetailScreenViewModel(
-    private val repositoryId: Long,
-    getStoredQueryResultsUseCase: GetStoredQueryResultsUseCase,
+    repositoryId: Long,
+    getRepositoryDetailByIdUseCase: GetRepositoryDetailByIdUseCase,
 ) : ViewModel() {
 
-    val uiState = getStoredQueryResultsUseCase()
-        .map { repositoriesResult ->
-            repositoriesResult?.data?.list?.firstOrNull { it.id == repositoryId }
-        }.stateIn(
+    val uiState = getRepositoryDetailByIdUseCase(repositoryId)
+        .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.Eagerly,
+            started = SharingStarted.WhileSubscribed(5.seconds.inWholeMilliseconds),
             null
         )
 }

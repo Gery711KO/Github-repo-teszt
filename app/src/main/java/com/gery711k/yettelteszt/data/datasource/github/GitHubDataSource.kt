@@ -1,4 +1,4 @@
-package com.gery711k.yettelteszt.domain.datastore
+package com.gery711k.yettelteszt.data.datasource.github
 
 import com.gery711k.yettelteszt.domain.model.github.GitHubRepositorySearchResult
 import kotlinx.coroutines.flow.Flow
